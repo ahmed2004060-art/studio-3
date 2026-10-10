@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Studio 3D</title>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.3.0/dist/model-viewer.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0a0f;color:#e8e8f0;min-height:100vh;display:flex;flex-direction:column}
+header{padding:20px 32px;border-bottom:1px solid #1e1e2e;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{width:36px;height:36px;background:linear-gradient(135deg,#6c63ff,#a78bfa);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+header h1{font-size:20px;font-weight:600}
+.page{flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 24px;gap:24px}
+.upload-zone{width:100%;max-width:560px;border:2px dashed #2a2a3e;border-radius:20px;padding:56px 24px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload-zone:hover{border-color:#6c63ff;background:#0f0f1a}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{width:64px;height:64px;margin:0 auto 16px;background:#1a1730;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px}
+.upload-zone h2{font-size:17px;font-weight:500;margin-bottom:6px}
+.upload-zone p{font-size:13px;color:#6b6b8a}
+.preview-row{display:none;width:100%;max-width:560px;gap:20px;align-items:center;background:#0f0f1a;border:1px solid #1e1e2e;border-radius:16px;padding:20px}
+.preview-row.show{display:flex}
+.preview-row img{width:100px;height:100px;object-fit:cover;border-radius:12px;flex-shrink:0}
+.preview-info{flex:1;display:flex;flex-direction:column;gap:8px}
+.fname{font-size:14px;font-weight:500}
+.fsize{font-size:12px;color:#6b6b8a}
+.btn{padding:12px 28px;background:linear-gradient(135deg,#6c63ff,#a78bfa);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.btn:hover{opacity:.9}.btn:disabled{opacity:.4;cursor:not-allowed}
+.progress{display:none;width:100%;max-width:560px;flex-direction:column;align-items:center;gap:16px;background:#0f0f1a;border:1px solid #1e1e2e;border-radius:16px;padding:32px}
+.progress.show{display:flex}
+.spinner{width:48px;height:48px;border:3px solid #1e1e2e;border-top-color:#6c63ff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.st{font-size:14px;color:#9999b8;text-align:center;line-height:1.6}
+.iss-link{font-size:13px;color:#a78bfa;text-decoration:none;display:none}
+.viewer-wrap{display:none;width:100%;max-width:800px;flex-direction:column;gap:16px}
+.viewer-wrap.show{display:flex}
+model-viewer{width:100%;height:500px;background:#0f0f1a;border:1px solid #1e1e2e;border-radius:16px;--progress-bar-color:#6c63ff}
+.viewer-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-sec{padding:12px 24px;background:#1a1730;border:1px solid #2a2a3e;border-radius:10px;color:#e8e8f0;font-size:14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-sec:hover{background:#222240}
+.tok-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;align-items:center;justify-content:center;padding:24px}
+.tok-overlay.show{display:flex}
+.tok-card{background:#0f0f1a;border:1px solid #2a2a3e;border-radius:20px;padding:32px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px}
+.tok-card h2{font-size:17px;font-weight:600}
+.tok-card p{font-size:13px;color:#9999b8;line-height:1.6}
+.tok-card input{background:#0a0a0f;border:1px solid #2a2a3e;border-radius:10px;padding:12px 14px;color:#e8e8f0;font-size:14px;outline:none;width:100%}
+.tok-card input:focus{border-color:#6c63ff}
+.tok-card a{color:#6c63ff;font-size:13px}
+</style>
+</head>
+<body>
+<div class="tok-overlay" id="tokOv">
+  <div class="tok-card">
+    <h2>🔑 GitHub Token</h2>
+    <p>أدخل الـ Token مرة واحدة. احصل عليه من <a href="https://github.com/settings/tokens/new?scopes=repo&description=Studio3D" target="_blank">هنا</a> — فعّل repo فقط.</p>
+    <input type="password" id="tokIn" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+    <button class="btn" onclick="saveTok()">حفظ ✦</button>
+  </div>
+</div>
+<header><div class="logo">✦</div><h1>Studio 3D</h1></header>
+<div class="page">
+  <div class="upload-zone" id="uz">
+    <input type="file" accept="image/*" onchange="handleFile(this.files[0])">
+    <div class="upload-icon">🖼️</div>
+    <h2>ارفع صورتك هنا</h2>
+    <p>PNG · JPG · WEBP — خلفية بيضاء تعطي أفضل نتيجة</p>
+  </div>
+  <div class="preview-row" id="pv">
+    <img id="pi" src="" alt="">
+    <div class="preview-info">
+      <div class="fname" id="fn"></div>
+      <div class="fsize" id="fs"></div>
+      <button class="btn" id="goBtn" onclick="go()">ابدأ التوليد ✦</button>
+    </div>
+  </div>
+  <div class="progress" id="prog">
+    <div class="spinner"></div>
+    <div class="st" id="stMsg">جارٍ الرفع...</div>
+    <a class="iss-link" id="issLnk" href="#" target="_blank">📋 تابع الطلب على GitHub</a>
+  </div>
+  <div class="viewer-wrap" id="vw">
+    <model-viewer id="mv" camera-controls auto-rotate shadow-intensity="1" ar></model-viewer>
+    <div class="viewer-actions">
+      <a id="dlBtn" class="btn-sec" download="model.glb">⬇️ تحميل GLB</a>
+      <button class="btn-sec" onclick="reset()">🖼️ نموذج جديد</button>
+    </div>
+  </div>
+</div>
+<script>
+var OWNER='ahmed2004060-art', REPO='studio-3';
+var TOK_KEY='st3d_'+OWNER+'_'+REPO;
+(function(){
+  var h=new URLSearchParams(location.hash.replace('#',''));
+  var t=h.get('t');
+  if(t){localStorage.setItem(TOK_KEY,t);history.replaceState(null,'',location.pathname);}
+  if(!localStorage.getItem(TOK_KEY))document.getElementById('tokOv').classList.add('show');
+})();
+function saveTok(){
+  var v=document.getElementById('tokIn').value.trim();
+  if(!v)return;
+  localStorage.setItem(TOK_KEY,v);
+  document.getElementById('tokOv').classList.remove('show');
+}
+var file;
+function handleFile(f){
+  if(!f||!f.type.startsWith('image/'))return;
+  file=f;
+  var r=new FileReader();
+  r.onload=function(e){
+    document.getElementById('pi').src=e.target.result;
+    document.getElementById('fn').textContent=f.name;
+    document.getElementById('fs').textContent=(f.size/1024).toFixed(1)+' KB';
+    document.getElementById('pv').classList.add('show');
+  };
+  r.readAsDataURL(f);
+}
+function go(){
+  if(!file)return;
+  var token=localStorage.getItem(TOK_KEY);
+  if(!token){document.getElementById('tokOv').classList.add('show');return;}
+  document.getElementById('goBtn').disabled=true;
+  document.getElementById('uz').style.display='none';
+  document.getElementById('prog').classList.add('show');
+  setMsg('⟳ جارٍ رفع الصورة...');
+  var getOrCreateRelease=function(){
+    return ghGet(token,'repos/'+OWNER+'/'+REPO+'/releases/tags/studio3d-uploads')
+    .catch(function(){
+      return ghPost(token,'repos/'+OWNER+'/'+REPO+'/releases',{tag_name:'studio3d-uploads',name:'Studio 3D Uploads',prerelease:true});
+    });
+  };
+  getOrCreateRelease().then(function(rel){
+    var assetName='img_'+Date.now()+'.'+file.name.split('.').pop();
+    var uploadUrl=rel.upload_url.replace('{?name,label}','?name='+encodeURIComponent(assetName));
+    return fetch(uploadUrl,{method:'POST',headers:{'Authorization':'token '+token,'Content-Type':file.type||'image/png'},body:file})
+    .then(function(r){return r.ok?r.json():r.json().then(function(d){throw new Error(d.message);});});
+  }).then(function(asset){
+    setMsg('✅ تم الرفع — جارٍ إنشاء الطلب...');
+    return ghPost(token,'repos/'+OWNER+'/'+REPO+'/issues',{title:'3D Generation',body:asset.browser_download_url});
+  }).then(function(iss){
+    var lnk=document.getElementById('issLnk');
+    lnk.href=iss.html_url; lnk.style.display='';
+    setMsg('⟳ جارٍ التوليد — قد يستغرق 5-10 دقائق...');
+    setTimeout(function(){poll(token,iss.number);},90000);
+  }).catch(function(err){
+    setMsg('❌ '+err.message);
+    document.getElementById('goBtn').disabled=false;
+    document.getElementById('uz').style.display='';
+  });
+}
+function poll(token,num){
+  ghGet(token,'repos/'+OWNER+'/'+REPO+'/contents/output/model_'+num+'.glb')
+  .then(function(d){
+    showModel(d.download_url);
+  }).catch(function(){
+    setTimeout(function(){poll(token,num);},30000);
+  });
+}
+function showModel(url){
+  document.getElementById('mv').setAttribute('src',url);
+  document.getElementById('dlBtn').href=url;
+  document.getElementById('prog').classList.remove('show');
+  document.getElementById('vw').classList.add('show');
+}
+function reset(){
+  file=null;
+  document.getElementById('pv').classList.remove('show');
+  document.getElementById('goBtn').disabled=false;
+  document.getElementById('vw').classList.remove('show');
+  document.getElementById('uz').style.display='';
+  document.getElementById('issLnk').style.display='none';
+}
+function setMsg(m){document.getElementById('stMsg').textContent=m;}
+function ghGet(tok,path){
+  return fetch('https://api.github.com/'+path,{headers:{'Authorization':'token '+tok}})
+  .then(function(r){return r.ok?r.json():r.json().then(function(d){throw new Error(d.message);});});
+}
+function ghPut(tok,path,body){
+  return fetch('https://api.github.com/'+path,{method:'PUT',headers:{'Authorization':'token '+tok,'Content-Type':'application/json'},body:JSON.stringify(body)})
+  .then(function(r){return r.ok?r.json():r.json().then(function(d){throw new Error(d.message);});});
+}
+function ghPost(tok,path,body){
+  return fetch('https://api.github.com/'+path,{method:'POST',headers:{'Authorization':'token '+tok,'Content-Type':'application/json'},body:JSON.stringify(body)})
+  .then(function(r){return r.ok?r.json():r.json().then(function(d){throw new Error(d.message);});});
+}
+</script>
+</body></html>
